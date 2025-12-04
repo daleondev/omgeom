@@ -1,13 +1,30 @@
+#include <variant>
 import std;
-import omg.meta;
+import omg;
+
+using Tuple1 = std::tuple<int, double, const char*>;
+using Tuple2 = std::tuple<int, float, bool>;
+using Tuple3 = omg::meta::tuple::tuple_cat_t<Tuple1, Tuple2>;
+using Tuple4 = omg::meta::tuple::make_unique_t<Tuple3>;
+
+using Variant = omg::meta::tuple::to_variant_t<Tuple3>;
+using Variant2 = omg::meta::variant::make_unique_t<Variant>;
+
+void print(const Variant2& v)
+{
+    std::visit([](const auto& t) {
+        std::println("Hello Variant {}", t);
+    },
+        v);
+}
 
 int main()
 {
-    using Tuple = std::tuple<int, double, const char*>;
-    Tuple tuple { 1, 2.2, "Test" };
+    Tuple3 tuple { 1, 2.2, "Test", 5, 3.3f, true };
 
     omg::meta::tuple::forEach([](auto I, auto& t) {
         std::println("Hello Tuple {} - {}", I, t);
+        print(t);
     },
         tuple);
 

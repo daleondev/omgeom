@@ -1,10 +1,11 @@
 export module omg.meta:tuple;
 
 import std;
+import :common;
 
 export namespace omg::meta::tuple {
 //------------------------------------------------------
-//                    is Tuple
+//                    is tuple
 //------------------------------------------------------
 
 template <typename T>
@@ -20,7 +21,7 @@ template <typename T>
 concept Tuple = is_tuple_v<T>;
 
 //------------------------------------------------------
-//                 Tuple has type
+//                 tuple has type
 //------------------------------------------------------
 
 template <typename U, typename T>
@@ -45,7 +46,7 @@ consteval std::size_t size() { return std::tuple_size_v<std::remove_cvref_t<T>>;
 template <typename T, typename Callable>
 concept is_tuple_iterable_v = []<std::size_t... I>(std::index_sequence<I...>) {
     return (std::invocable<Callable, std::size_t, decltype(std::get<I>(std::declval<T>()))> && ...);
-}(std::make_index_sequence<size<T>()> {});
+}(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<T>>> {});
 
 template <Tuple T, std::invocable<std::size_t> Callable>
 constexpr void forEach(Callable&& callable)
@@ -63,4 +64,65 @@ constexpr void forEach(Callable&& callable, T&& tuple)
         (std::invoke(std::forward<Callable>(callable), I, std::get<I>(tuple)), ...);
     }(std::make_index_sequence<size<T>()> {});
 }
+
+//------------------------------------------------------
+//                     concat
+//------------------------------------------------------
+
+template <Tuple... Ts>
+struct tuple_cat {
+    using type = decltype(std::tuple_cat(std::declval<Ts>()...));
+};
+
+template <Tuple... Ts>
+using tuple_cat_t = typename tuple_cat<Ts...>::type;
+
+//------------------------------------------------------
+//                     make unique
+//------------------------------------------------------
+
+template <typename T, typename U>
+struct unique_filter;
+
+template <typename... Ts>
+struct unique_filter<std::tuple<>, std::tuple<Ts...>> {
+    using type = std::tuple<Ts...>;
+};
+
+template <typename Head, typename... Tail, typename... Ts>
+struct unique_filter<std::tuple<Head, Tail...>, std::tuple<Ts...>> {
+    using next_tuple = std::conditional_t<
+        common::contains_v<Head, Ts...>,
+        std::tuple<Ts...>,
+        std::tuple<Ts..., Head>>;
+    using type = typename unique_filter<std::tuple<Tail...>, next_tuple>::type;
+};
+
+template <typename T>
+struct make_unique;
+
+template <typename... Ts>
+struct make_unique<std::tuple<Ts...>> {
+    using type = typename unique_filter<std::tuple<Ts...>, std::tuple<>>::type;
+};
+
+// Helper alias
+template <typename T>
+using make_unique_t = typename make_unique<T>::type;
+
+//------------------------------------------------------
+//                     to variant
+//------------------------------------------------------
+
+template <typename T>
+struct to_variant;
+
+template <typename... Ts>
+struct to_variant<std::tuple<Ts...>> {
+    using type = std::variant<Ts...>;
+};
+
+template <Tuple T>
+using to_variant_t = typename to_variant<T>::type;
+
 }
