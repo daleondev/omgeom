@@ -43,25 +43,29 @@ concept HasType = has_type_v<T, U>;
 template <Tuple T>
 consteval std::size_t count() { return std::tuple_size_v<std::remove_cvref_t<T>>; }
 
-template <typename T, typename Callable>
-concept is_tuple_iterable_v = []<std::size_t... I>(std::index_sequence<I...>) {
-    return (std::invocable<Callable, std::size_t, decltype(std::get<I>(std::declval<T>()))> && ...);
+template <typename F, typename... Args>
+concept is_invocable_with_size = requires(F&& f, Args&&... args) {
+    { std::forward<F>(f).template operator()<std::size_t {}>(std::forward<Args>(args)...) };
+};
+
+template <typename Callable, typename T>
+concept is_tuple_iterable = []<std::size_t... I>(std::index_sequence<I...>) {
+    return (is_invocable_with_size<Callable, decltype(std::get<I>(std::declval<T>()))> && ...);
 }(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<T>>> {});
 
-template <Tuple T, std::invocable<std::size_t> Callable>
+template <Tuple T, is_invocable_with_size<> Callable>
 constexpr void forEach(Callable&& callable)
 {
     [&]<std::size_t... I>(std::index_sequence<I...>) {
-        (std::invoke(std::forward<Callable>(callable), I), ...);
+        (callable.template operator()<I>(), ...);
     }(std::make_index_sequence<count<T>()> {});
 }
 
-template <Tuple T, typename Callable>
-    requires is_tuple_iterable_v<T, Callable>
+template <Tuple T, is_tuple_iterable<T> Callable>
 constexpr void forEach(Callable&& callable, T&& tuple)
 {
     [&]<std::size_t... I>(std::index_sequence<I...>) {
-        (std::invoke(std::forward<Callable>(callable), I, std::get<I>(tuple)), ...);
+        (callable.template operator()<I>(std::get<I>(tuple)), ...);
     }(std::make_index_sequence<count<T>()> {});
 }
 
@@ -106,7 +110,6 @@ struct make_unique<std::tuple<Ts...>> {
     using type = typename unique_filter<std::tuple<Ts...>, std::tuple<>>::type;
 };
 
-// Helper alias
 template <typename T>
 using make_unique_t = typename make_unique<T>::type;
 

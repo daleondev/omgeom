@@ -1,4 +1,3 @@
-#include <variant>
 import std;
 import omg;
 
@@ -29,16 +28,23 @@ int main()
     Tuple3 tuple { 1, 2.2, "Test", 5, 3.3f, true };
     Struct s;
 
-    omg::meta::tuple::forEach([](auto I, auto& t) {
-        std::println("Hello Tuple {} - {}", I, t);
-        print(t);
+    omg::meta::tuple::forEach([]<std::size_t I>(auto& t) {
+        std::println("Tuple {}: {}", I, t);
     },
         tuple);
 
-    omg::meta::data_struct::forEach([](auto I, auto& t) {
-        std::println("Hello Struct {} - {}", I, t);
+    omg::meta::data_struct::forEach([]<std::size_t I>(auto& t) {
+        std::println("Struct {}: {}", omg::meta::data_struct::field_name<Struct, I>(), t);
     },
         s);
+
+    // constexpr std::string_view name0 = omg::meta::data_struct::field_name<Struct, 0>();
+    // constexpr std::string_view name1 = omg::meta::data_struct::field_name<Struct, 1>();
+    // constexpr std::string_view name2 = Struct, 2>();
+
+    // std::cout << "Field 0: " << name0 << "\n"; // Prints "id"
+    // std::cout << "Field 1: " << name1 << "\n"; // Prints "score"
+    // std::cout << "Field 2: " << name2 << "\n"; // Prints "username"
 
     return 0;
 }

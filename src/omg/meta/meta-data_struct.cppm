@@ -48,7 +48,7 @@ constexpr auto to_tuple(T& data_struct)
 {
     // clang-format off
     constexpr auto N = field_count<T>();
-    if constexpr (N == 0)       { return std::tuple<>(); }
+    if constexpr (N == 0) { return std::tuple<>(); }
     else if constexpr (N == 1)  { auto& [p1] = data_struct; return std::tie(p1); }
     else if constexpr (N == 2)  { auto& [p1, p2] = data_struct; return std::tie(p1, p2); }
     else if constexpr (N == 3)  { auto& [p1, p2, p3] = data_struct; return std::tie(p1, p2, p3); }
@@ -113,7 +113,7 @@ constexpr auto to_tuple(T& data_struct)
     else if constexpr (N == 62) { auto& [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39, p40, p41, p42, p43, p44, p45, p46, p47, p48, p49, p50, p51, p52, p53, p54, p55, p56, p57, p58, p59, p60, p61, p62] = data_struct; return std::tie(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39, p40, p41, p42, p43, p44, p45, p46, p47, p48, p49, p50, p51, p52, p53, p54, p55, p56, p57, p58, p59, p60, p61, p62); }
     else if constexpr (N == 63) { auto& [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39, p40, p41, p42, p43, p44, p45, p46, p47, p48, p49, p50, p51, p52, p53, p54, p55, p56, p57, p58, p59, p60, p61, p62, p63] = data_struct; return std::tie(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39, p40, p41, p42, p43, p44, p45, p46, p47, p48, p49, p50, p51, p52, p53, p54, p55, p56, p57, p58, p59, p60, p61, p62, p63); }
     else if constexpr (N == 64) { auto& [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39, p40, p41, p42, p43, p44, p45, p46, p47, p48, p49, p50, p51, p52, p53, p54, p55, p56, p57, p58, p59, p60, p61, p62, p63, p64] = data_struct; return std::tie(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39, p40, p41, p42, p43, p44, p45, p46, p47, p48, p49, p50, p51, p52, p53, p54, p55, p56, p57, p58, p59, p60, p61, p62, p63, p64); }
-    else return std::tuple<>();
+    else static_assert(false, "DataStruct has too many fields");
     // clang-format on
 }
 
@@ -129,11 +129,41 @@ constexpr void forEach(Callable&& callable)
     }(std::make_index_sequence<field_count<T>()> {});
 }
 
-template <DataStruct T, typename Callable>
-    requires tuple::is_tuple_iterable_v<decltype(to_tuple(std::declval<T>())), Callable>
+template <DataStruct T, tuple::is_tuple_iterable<decltype(to_tuple(std::declval<T>()))> Callable>
 constexpr void forEach(Callable&& callable, T&& data_struct)
 {
     tuple::forEach(std::forward<Callable>(callable), to_tuple(data_struct));
+}
+
+//------------------------------------------------------
+//                   field names
+//------------------------------------------------------
+
+consteval std::string_view parse_field_name(std::string_view sig)
+{
+    auto end = sig.find_last_of("]");
+    if (end == std::string_view::npos)
+        end = sig.size();
+
+    auto start = sig.find_last_of(".:", end);
+    if (start == std::string_view::npos)
+        return "unknown";
+
+    return sig.substr(start + 1, end - start - 1);
+}
+
+template <auto Ptr>
+consteval std::string_view field_name_from_ptr()
+{
+    return parse_field_name(std::source_location::current().function_name());
+}
+
+template <DataStruct T, std::size_t I>
+consteval std::string_view field_name()
+{
+    static_assert(I < field_count<T>(), "Invalid index");
+    static constexpr T data_struct;
+    return field_name_from_ptr<&std::get<I>(to_tuple(data_struct))>();
 }
 
 }
