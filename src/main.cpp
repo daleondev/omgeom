@@ -10,6 +10,12 @@ using Tuple4 = omg::meta::tuple::make_unique_t<Tuple3>;
 using Variant = omg::meta::tuple::to_variant_t<Tuple3>;
 using Variant2 = omg::meta::variant::make_unique_t<Variant>;
 
+struct Struct {
+    int i = 5;
+    float f = 10.4;
+    char c = 'x';
+};
+
 void print(const Variant2& v)
 {
     std::visit([](const auto& t) {
@@ -21,12 +27,18 @@ void print(const Variant2& v)
 int main()
 {
     Tuple3 tuple { 1, 2.2, "Test", 5, 3.3f, true };
+    Struct s;
 
     omg::meta::tuple::forEach([](auto I, auto& t) {
         std::println("Hello Tuple {} - {}", I, t);
         print(t);
     },
         tuple);
+
+    omg::meta::data_struct::forEach([](auto I, auto& t) {
+        std::println("Hello Struct {} - {}", I, t);
+    },
+        s);
 
     return 0;
 }

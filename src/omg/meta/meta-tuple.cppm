@@ -41,7 +41,7 @@ concept HasType = has_type_v<T, U>;
 //------------------------------------------------------
 
 template <Tuple T>
-consteval std::size_t size() { return std::tuple_size_v<std::remove_cvref_t<T>>; }
+consteval std::size_t count() { return std::tuple_size_v<std::remove_cvref_t<T>>; }
 
 template <typename T, typename Callable>
 concept is_tuple_iterable_v = []<std::size_t... I>(std::index_sequence<I...>) {
@@ -53,7 +53,7 @@ constexpr void forEach(Callable&& callable)
 {
     [&]<std::size_t... I>(std::index_sequence<I...>) {
         (std::invoke(std::forward<Callable>(callable), I), ...);
-    }(std::make_index_sequence<size<T>()> {});
+    }(std::make_index_sequence<count<T>()> {});
 }
 
 template <Tuple T, typename Callable>
@@ -62,7 +62,7 @@ constexpr void forEach(Callable&& callable, T&& tuple)
 {
     [&]<std::size_t... I>(std::index_sequence<I...>) {
         (std::invoke(std::forward<Callable>(callable), I, std::get<I>(tuple)), ...);
-    }(std::make_index_sequence<size<T>()> {});
+    }(std::make_index_sequence<count<T>()> {});
 }
 
 //------------------------------------------------------
