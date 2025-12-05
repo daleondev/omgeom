@@ -141,7 +141,7 @@ constexpr void forEach(Callable&& callable, T&& data_struct)
 
 consteval std::string_view parse_field_name(std::string_view sig)
 {
-    auto end = sig.find_last_of("]");
+    auto end = sig.find_last_of("]>");
     if (end == std::string_view::npos)
         end = sig.size();
 

@@ -12,8 +12,8 @@ export namespace omg::meta::variant {
 template <typename T>
 struct is_variant : std::false_type { };
 
-template <typename... T>
-struct is_variant<std::variant<T...>> : std::true_type { };
+template <typename... Ts>
+struct is_variant<std::variant<Ts...>> : std::true_type { };
 
 template <typename T>
 constexpr bool is_variant_v = is_variant<std::remove_cvref_t<T>>::value;
@@ -51,5 +51,21 @@ struct make_unique<std::variant<Ts...>> {
 // Helper alias
 template <typename T>
 using make_unique_t = typename make_unique<T>::type;
+
+//------------------------------------------------------
+//                     to references
+//------------------------------------------------------
+
+template <typename T>
+struct to_references;
+
+template <typename... Ts>
+struct to_references<std::variant<Ts...>> {
+    using type = std::variant<std::reference_wrapper<Ts>...>;
+};
+
+// Helper alias
+template <typename T>
+using to_references_t = typename to_references<T>::type;
 
 }

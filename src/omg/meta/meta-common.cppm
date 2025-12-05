@@ -2,7 +2,7 @@ export module omg.meta:common;
 
 import std;
 
-namespace omg::meta::common {
+export namespace omg::meta::common {
 
 template <typename T, typename... Ts>
 struct contains : std::disjunction<std::is_same<T, Ts>...> { };
