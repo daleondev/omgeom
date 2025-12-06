@@ -10,7 +10,8 @@ export namespace omg::meta::data_struct {
 //------------------------------------------------------
 
 template <typename T>
-constexpr bool is_data_struct_v = std::is_class_v<std::remove_cvref_t<T>> && std::is_aggregate_v<std::remove_cvref_t<T>>;
+constexpr bool is_data_struct_v = std::is_class_v<std::remove_cvref_t<T>> &&
+                                  std::is_aggregate_v<std::remove_cvref_t<T>>;
 
 template <typename T>
 concept DataStruct = is_data_struct_v<T>;
@@ -20,33 +21,29 @@ concept DataStruct = is_data_struct_v<T>;
 //------------------------------------------------------
 
 struct Any {
-    template <typename T>
-    operator T() const;
+  template <typename T> operator T() const;
 };
 
 template <DataStruct T, std::size_t... I>
-consteval auto try_construct(std::index_sequence<I...>)
-{
-    return requires { T { (I, Any {})... }; };
+consteval auto try_construct(std::index_sequence<I...>) {
+  return requires { T{(I, Any{})...}; };
 }
 
 template <DataStruct T, std::size_t N = 64>
-consteval std::size_t field_count()
-{
-    if constexpr (try_construct<std::remove_cvref_t<T>>(std::make_index_sequence<N> {}))
-        return N;
-    else
-        return field_count<T, N - 1>();
+consteval std::size_t field_count() {
+  if constexpr (try_construct<std::remove_cvref_t<T>>(
+                    std::make_index_sequence<N>{}))
+    return N;
+  else
+    return field_count<T, N - 1>();
 }
 
 //------------------------------------------------------
 //                    to tuple
 //------------------------------------------------------
 
-template <DataStruct T>
-constexpr auto to_tuple(T& data_struct)
-{
-    // clang-format off
+template <DataStruct T> constexpr auto to_tuple(T &data_struct) {
+  // clang-format off
     constexpr auto N = field_count<T>();
     if constexpr (N == 0) { return std::tuple<>(); }
     else if constexpr (N == 1)  { auto& [p1] = data_struct; return std::tie(p1); }
@@ -114,56 +111,62 @@ constexpr auto to_tuple(T& data_struct)
     else if constexpr (N == 63) { auto& [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39, p40, p41, p42, p43, p44, p45, p46, p47, p48, p49, p50, p51, p52, p53, p54, p55, p56, p57, p58, p59, p60, p61, p62, p63] = data_struct; return std::tie(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39, p40, p41, p42, p43, p44, p45, p46, p47, p48, p49, p50, p51, p52, p53, p54, p55, p56, p57, p58, p59, p60, p61, p62, p63); }
     else if constexpr (N == 64) { auto& [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39, p40, p41, p42, p43, p44, p45, p46, p47, p48, p49, p50, p51, p52, p53, p54, p55, p56, p57, p58, p59, p60, p61, p62, p63, p64] = data_struct; return std::tie(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39, p40, p41, p42, p43, p44, p45, p46, p47, p48, p49, p50, p51, p52, p53, p54, p55, p56, p57, p58, p59, p60, p61, p62, p63, p64); }
     else static_assert(false, "DataStruct has too many fields");
-    // clang-format on
+  // clang-format on
 }
+
+template <DataStruct T>
+using to_tuple_t =
+    tuple::remove_refs_t<decltype(to_tuple(std::declval<T &>()))>;
+
+//------------------------------------------------------
+//                    type at
+//------------------------------------------------------
+
+template <std::size_t I, DataStruct T>
+using type_at_t = tuple::type_at_t<I, to_tuple_t<T>>;
 
 //------------------------------------------------------
 //                    for each
 //------------------------------------------------------
 
 template <DataStruct T, std::invocable<std::size_t> Callable>
-constexpr void forEach(Callable&& callable)
-{
-    [&]<std::size_t... I>(std::index_sequence<I...>) {
-        (std::invoke(std::forward<Callable>(callable), I), ...);
-    }(std::make_index_sequence<field_count<T>()> {});
+constexpr void forEach(Callable &&callable) {
+  [&]<std::size_t... I>(std::index_sequence<I...>) {
+    (std::invoke(std::forward<Callable>(callable), I), ...);
+  }(std::make_index_sequence<field_count<T>()>{});
 }
 
-template <DataStruct T, tuple::is_tuple_iterable<decltype(to_tuple(std::declval<T>()))> Callable>
-constexpr void forEach(Callable&& callable, T&& data_struct)
-{
-    tuple::forEach(std::forward<Callable>(callable), to_tuple(data_struct));
+template <
+    DataStruct T,
+    tuple::is_tuple_iterable<decltype(to_tuple(std::declval<T>()))> Callable>
+constexpr void forEach(Callable &&callable, T &&data_struct) {
+  tuple::forEach(std::forward<Callable>(callable), to_tuple(data_struct));
 }
 
 //------------------------------------------------------
 //                   field names
 //------------------------------------------------------
 
-consteval std::string_view parse_field_name(std::string_view sig)
-{
-    auto end = sig.find_last_of("]>");
-    if (end == std::string_view::npos)
-        end = sig.size();
+consteval std::string_view parse_field_name(std::string_view sig) {
+  auto end = sig.find_last_of("]>");
+  if (end == std::string_view::npos)
+    end = sig.size();
 
-    auto start = sig.find_last_of(".:", end);
-    if (start == std::string_view::npos)
-        return "unknown";
+  auto start = sig.find_last_of(".:", end);
+  if (start == std::string_view::npos)
+    return "unknown";
 
-    return sig.substr(start + 1, end - start - 1);
+  return sig.substr(start + 1, end - start - 1);
 }
 
-template <auto Ptr>
-consteval std::string_view field_name_from_ptr()
-{
-    return parse_field_name(std::source_location::current().function_name());
+template <auto Ptr> consteval std::string_view field_name_from_ptr() {
+  return parse_field_name(std::source_location::current().function_name());
 }
 
-template <DataStruct T, std::size_t I>
-consteval std::string_view field_name()
-{
-    static_assert(I < field_count<T>(), "Invalid index");
-    static constexpr T data_struct;
-    return field_name_from_ptr<&std::get<I>(to_tuple(data_struct))>();
+template <DataStruct T, std::size_t I> consteval std::string_view field_name() {
+  static_assert(I < field_count<T>(), "Invalid index");
+  static constexpr T data_struct;
+  return field_name_from_ptr<&std::get<I>(to_tuple(data_struct))>();
 }
 
-}
+} // namespace omg::meta::data_struct
